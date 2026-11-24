@@ -1,0 +1,2494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Saru Bai - 3D Endless Runner</title>
+  <!-- Google Fonts: Fredoka for bold, playful hyper-casual typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Three.js r128 for 3D rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Fredoka', sans-serif;
+      background-color: #7ed957;
+      touch-action: none; /* Prevent browser pull-to-refresh & scroll on mobile swipes */
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Hyper-casual outlined text styling */
+    .toon-title {
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-shadow:
+        -2.5px -2.5px 0 #18181b,
+         2.5px -2.5px 0 #18181b,
+        -2.5px  2.5px 0 #18181b,
+         2.5px  2.5px 0 #18181b,
+         0px    4px   0 #18181b;
+    }
+
+    .toon-subtitle {
+      color: #fde047;
+      font-weight: 700;
+      text-shadow:
+        -2px -2px 0 #18181b,
+         2px -2px 0 #18181b,
+        -2px  2px 0 #18181b,
+         2px  2px 0 #18181b,
+         0px  3px 0 #18181b;
+    }
+
+    /* Crisp white pill badges with thick dark ink border */
+    .toon-pill {
+      background: #ffffff;
+      border: 3px solid #18181b;
+      border-radius: 9999px;
+      box-shadow: 0 4px 0 #18181b;
+      color: #18181b;
+      font-weight: 700;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .toon-pill:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #18181b;
+    }
+
+    .toon-btn {
+      cursor: pointer;
+      background: linear-gradient(180deg, #fde047 0%, #facc15 100%);
+      border: 3.5px solid #18181b;
+      border-radius: 9999px;
+      box-shadow: 0 6px 0 #18181b;
+      color: #18181b;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+    }
+
+    .toon-btn:hover {
+      filter: brightness(1.05);
+    }
+
+    .toon-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #18181b;
+    }
+
+    .toon-btn-secondary {
+      cursor: pointer;
+      background: #ffffff;
+      border: 3px solid #18181b;
+      border-radius: 9999px;
+      box-shadow: 0 4px 0 #18181b;
+      color: #18181b;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .toon-btn-secondary:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #18181b;
+    }
+
+    /* HUD Layout */
+    #hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px 16px;
+      z-index: 10;
+    }
+
+    .hud-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .hud-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 0.95rem;
+    }
+
+    .hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      flex: 1;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+
+    .game-logo-small {
+      font-size: clamp(1.35rem, 3.5vw, 2.1rem);
+      line-height: 1.05;
+      margin-bottom: 4px;
+    }
+
+    /* Progress bar styled with thick ink border */
+    .progress-track {
+      width: 100%;
+      max-width: 240px;
+      height: 18px;
+      background: #ffffff;
+      border: 3px solid #18181b;
+      border-radius: 9999px;
+      box-shadow: 0 3px 0 #18181b;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 2px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ec4899, #f43f5e);
+      border-radius: 9999px;
+      transition: width 0.15s ease-out;
+    }
+
+    .score-readout {
+      font-size: clamp(1.3rem, 3vw, 1.85rem);
+      margin-top: 3px;
+    }
+
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .icon-btn {
+      padding: 7px 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Active powerup pills */
+    #powerup-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .powerup-chip {
+      background: #18181b;
+      color: #fde047;
+      border: 2.5px solid #ffffff;
+      border-radius: 9999px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+      animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Bottom control bar & hint toast */
+    .hud-bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .hint-banner {
+      background: rgba(24, 24, 27, 0.82);
+      color: #ffffff;
+      border: 2.5px solid #18181b;
+      border-radius: 9999px;
+      padding: 7px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      text-align: center;
+      transition: opacity 0.4s ease;
+    }
+
+    .bottom-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .bottom-pill-item {
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* Floating combo / pickup popup */
+    #floating-feedback {
+      position: absolute;
+      top: 34%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 15;
+      text-align: center;
+    }
+
+    .float-msg {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fde047;
+      text-shadow:
+        -2px -2px 0 #18181b,
+         2px -2px 0 #18181b,
+        -2px  2px 0 #18181b,
+         2px  2px 0 #18181b,
+         0px  4px 0 #18181b;
+      animation: floatUpFade 0.85s ease-out forwards;
+    }
+
+    /* Overlays (Start, Pause, Game Over) */
+    .overlay-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 25;
+      background: radial-gradient(circle at center, rgba(24, 24, 27, 0.25) 0%, rgba(24, 24, 27, 0.62) 100%);
+      transition: opacity 0.25s ease;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border: 4px solid #18181b;
+      border-radius: 28px;
+      box-shadow: 0 10px 0 #18181b;
+      padding: 24px 26px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      animation: popIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .hero-title {
+      font-size: clamp(2.6rem, 8vw, 4.2rem);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: #ec4899;
+      color: #ffffff;
+      border: 3px solid #18181b;
+      border-radius: 9999px;
+      padding: 4px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      box-shadow: 0 3px 0 #18181b;
+      margin-bottom: 18px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0 22px;
+      text-align: left;
+    }
+
+    .control-box {
+      background: #f8fafc;
+      border: 2.5px solid #18181b;
+      border-radius: 16px;
+      padding: 10px 12px;
+    }
+
+    .control-box-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      color: #ec4899;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .control-box-desc {
+      font-size: 0.85rem;
+      color: #18181b;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0 20px;
+    }
+
+    .stat-tile {
+      background: #f1f5f9;
+      border: 2.5px solid #18181b;
+      border-radius: 16px;
+      padding: 10px 6px;
+    }
+
+    .stat-tile-label {
+      font-size: 0.72rem;
+      color: #475569;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .stat-tile-val {
+      font-size: 1.25rem;
+      color: #18181b;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .play-cta {
+      width: 100%;
+      padding: 15px 24px;
+      font-size: 1.35rem;
+      letter-spacing: 0.04em;
+    }
+
+    /* Mobile quick-tap pads (optional helper for users who prefer tapping over swiping) */
+    .mobile-touch-pads {
+      display: none;
+      width: 100%;
+      max-width: 440px;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .touch-pad-btn {
+      flex: 1;
+      padding: 12px 0;
+      background: rgba(255, 255, 255, 0.88);
+      border: 3px solid #18181b;
+      border-radius: 18px;
+      box-shadow: 0 4px 0 #18181b;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #18181b;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .touch-pad-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #18181b;
+      background: #fde047;
+    }
+
+    @media (max-width: 768px) {
+      #hud {
+        padding: 10px 10px;
+      }
+      .stat-badge {
+        padding: 5px 10px;
+        font-size: 0.82rem;
+      }
+      .icon-btn {
+        padding: 6px 11px;
+        font-size: 0.8rem;
+      }
+      .progress-track {
+        height: 14px;
+        max-width: 165px;
+      }
+      .mobile-touch-pads.enabled {
+        display: flex;
+      }
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.82); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes floatUpFade {
+      0% { transform: translateY(0) scale(0.85); opacity: 1; }
+      100% { transform: translateY(-48px) scale(1.12); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Three.js WebGL Canvas mounts here -->
+
+    <!-- Live In-Game HUD -->
+    <div id="hud">
+      <div class="hud-top">
+        <!-- Left Stats: Coins & Rank -->
+        <div class="hud-left">
+          <div class="toon-pill stat-badge">
+            <span>🪙</span>
+            <span id="coin-count">0</span>
+          </div>
+          <div class="toon-pill stat-badge" id="rank-badge">
+            <span>🦁</span>
+            <span id="rank-label">Rookie</span>
+          </div>
+        </div>
+
+        <!-- Center Title, Progress Bar & Score -->
+        <div class="hud-center">
+          <div class="toon-title game-logo-small">SARU BAI</div>
+          <div class="progress-track" title="Progress to next Boss Rank">
+            <div class="progress-fill" id="rank-progress-fill"></div>
+          </div>
+          <div class="toon-title score-readout" id="score-display">0</div>
+          <div id="powerup-bar"></div>
+        </div>
+
+        <!-- Right Action Buttons -->
+        <div class="hud-right">
+          <button id="pause-btn" class="toon-pill icon-btn" aria-label="Pause Game">PAUSE</button>
+        </div>
+      </div>
+
+      <!-- Floating Pickup / Combo Feedback -->
+      <div id="floating-feedback"></div>
+
+      <!-- Bottom Hints & Quick Controls -->
+      <div class="hud-bottom">
+        <div class="hint-banner" id="hint-banner">
+          Swipe or Use Arrow Keys / WASD • Jump Over Barriers & Slide Under Gates!
+        </div>
+
+        <!-- Optional Touch Buttons for Mobile Players -->
+        <div class="mobile-touch-pads" id="mobile-pads">
+          <button class="touch-pad-btn" data-action="left" aria-label="Move Left">◀</button>
+          <button class="touch-pad-btn" data-action="jump" aria-label="Jump">▲ JUMP</button>
+          <button class="touch-pad-btn" data-action="slide" aria-label="Slide">▼ SLIDE</button>
+          <button class="touch-pad-btn" data-action="right" aria-label="Move Right">▶</button>
+        </div>
+
+        <div class="bottom-pills">
+          <button id="sound-toggle-btn" class="toon-pill bottom-pill-item">
+            <span id="sound-icon">🔊</span>
+            <span id="sound-text">Sound: ON</span>
+          </button>
+          <button id="cam-toggle-btn" class="toon-pill bottom-pill-item">
+            <span>🎥</span>
+            <span id="cam-text">Cam: Dynamic</span>
+          </button>
+          <button id="pads-toggle-btn" class="toon-pill bottom-pill-item">
+            <span>🎮</span>
+            <span id="pads-text">Touch Pads: Auto</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start Menu Overlay -->
+    <div id="start-overlay" class="overlay-screen">
+      <div class="toon-title hero-title">SARU BAI</div>
+      <div class="hero-badge">🦁 THE BOSS RUNNER</div>
+
+      <div class="modal-card">
+        <p style="color:#334155; font-weight:600; font-size:0.98rem; line-height:1.4;">
+          Dash down the sunlit boulevard with <strong>Saru Bai</strong>! Dodge traffic, leap barriers, slide under gates, and collect golden coins &amp; VIP Certificates.
+        </p>
+
+        <div class="controls-grid">
+          <div class="control-box">
+            <div class="control-box-title">📱 Mobile</div>
+            <div class="control-box-desc">Swipe Left, Right, Up (Jump), or Down (Slide)</div>
+          </div>
+          <div class="control-box">
+            <div class="control-box-title">💻 Laptop</div>
+            <div class="control-box-desc">Arrow Keys or W A S D + Spacebar</div>
+          </div>
+        </div>
+
+        <button id="start-btn" class="toon-btn play-cta">▶ TAP TO RUN</button>
+      </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay" class="overlay-screen hidden">
+      <div class="modal-card">
+        <div class="toon-title" style="font-size:2.2rem; margin-bottom:10px;">PAUSED</div>
+        <p style="color:#475569; font-weight:600; margin-bottom:20px;">
+          Saru Bai is taking a quick breather. Ready to hit the road?
+        </p>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <button id="resume-btn" class="toon-btn play-cta">▶ RESUME RUN</button>
+          <button id="restart-from-pause-btn" class="toon-btn-secondary" style="padding:12px; font-size:1.05rem;">↻ RESTART</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameover-overlay" class="overlay-screen hidden">
+      <div class="modal-card">
+        <div class="toon-title" style="font-size:2.2rem; color:#f43f5e; margin-bottom:4px;">WIPEOUT!</div>
+        <div id="new-best-pill" class="hero-badge hidden" style="background:#facc15; color:#18181b; margin-bottom:10px;">
+          🏆 NEW HIGH SCORE!
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-tile">
+            <div class="stat-tile-label">Score</div>
+            <div class="stat-tile-val" id="final-score">0</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-label">Best</div>
+            <div class="stat-tile-val" id="best-score">0</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-label">Coins</div>
+            <div class="stat-tile-val" id="final-coins">0</div>
+          </div>
+        </div>
+
+        <button id="retry-btn" class="toon-btn play-cta">↻ RUN AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * SARU BAI - 3D ENDLESS RUNNER
+     * Built with Three.js (r128) & Web Audio API
+     * Features:
+     * - Vibrant cel-shaded & black-ink outlined 3D cartoon visuals
+     * - Articulated 3D "Saru Bai" White Lion Boss character in suit, shades & gold chain
+     * - Responsive 3-lane Temple Run style mechanics (Jump, Slide, Lane Switch)
+     * - Mobile swipe gestures, optional on-screen touch pads, & laptop keyboard controls
+     * - Collectibles (Gold Coins, VIP Certificates) & Power-Ups (Magnet, Shield, 2x Score)
+     * ============================================================================
+     */
+
+    // ----------------------------------------------------------------------------
+    // 1. PROCEDURAL WEB AUDIO SYNTHESIZER (Zero external audio dependencies)
+    // ----------------------------------------------------------------------------
+    class SoundFX {
+      constructor() {
+        this.enabled = true;
+        this.ctx = null;
+        this.coinPitchStep = 0;
+        this.lastCoinTime = 0;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      toggle() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+      }
+
+      playTone(freq, endFreq, duration, type = 'sine', volume = 0.16) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (endFreq !== freq) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+          }
+
+          gain.gain.setValueAtTime(volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (e) {
+          // Ignore audio context restrictions if not yet unlocked
+        }
+      }
+
+      playLaneSwitch() {
+        this.playTone(260, 440, 0.11, 'triangle', 0.14);
+      }
+
+      playJump() {
+        this.playTone(240, 620, 0.22, 'sine', 0.18);
+      }
+
+      playSlide() {
+        this.playTone(340, 120, 0.20, 'sawtooth', 0.10);
+      }
+
+      playCoin() {
+        const now = performance.now();
+        if (now - this.lastCoinTime < 450) {
+          this.coinPitchStep = Math.min(this.coinPitchStep + 1, 10);
+        } else {
+          this.coinPitchStep = 0;
+        }
+        this.lastCoinTime = now;
+        const baseFreq = 660 + this.coinPitchStep * 45;
+        this.playTone(baseFreq, baseFreq * 1.25, 0.13, 'sine', 0.15);
+      }
+
+      playPowerup() {
+        this.playTone(440, 880, 0.18, 'triangle', 0.18);
+        setTimeout(() => this.playTone(587, 1174, 0.24, 'sine', 0.18), 90);
+      }
+
+      playShieldBreak() {
+        this.playTone(520, 140, 0.28, 'sawtooth', 0.18);
+      }
+
+      playCrash() {
+        this.playTone(180, 48, 0.42, 'sawtooth', 0.25);
+        setTimeout(() => this.playTone(120, 40, 0.35, 'square', 0.18), 60);
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // ----------------------------------------------------------------------------
+    // 2. THREE.JS TOON / INK-OUTLINE HELPERS
+    // ----------------------------------------------------------------------------
+    const OUTLINE_COLOR = 0x18181b;
+
+    /**
+     * Creates a bright toon-shaded mesh wrapped with a crisp black ink outline
+     * matching the hyper-casual cel-shaded aesthetic.
+     */
+    function createToonMesh(geometry, colorHex, options = {}) {
+      const {
+        outlineScale = 1.06,
+        noOutline = false,
+        emissive = 0x000000,
+        emissiveIntensity = 0
+      } = options;
+
+      const mat = new THREE.MeshToonMaterial({
+        color: colorHex,
+        emissive: emissive,
+        emissiveIntensity: emissiveIntensity
+      });
+
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+
+      if (!noOutline) {
+        const outlineMat = new THREE.MeshBasicMaterial({
+          color: OUTLINE_COLOR,
+          side: THREE.BackSide
+        });
+        const outlineMesh = new THREE.Mesh(geometry, outlineMat);
+        if (Array.isArray(outlineScale)) {
+          outlineMesh.scale.set(outlineScale[0], outlineScale[1], outlineScale[2]);
+        } else {
+          outlineMesh.scale.setScalar(outlineScale);
+        }
+        mesh.add(outlineMesh);
+      }
+
+      return mesh;
+    }
+
+    /**
+     * Creates a box with crisp ink edge lines (ideal for buildings, barriers, vehicles)
+     */
+    function createOutlinedBox(w, h, d, colorHex, edgeColor = OUTLINE_COLOR) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mat = new THREE.MeshToonMaterial({ color: colorHex });
+      const mesh = new THREE.Mesh(geo, mat);
+
+      const edges = new THREE.EdgesGeometry(geo);
+      const lineMat = new THREE.LineBasicMaterial({ color: edgeColor, linewidth: 2 });
+      const lineSegments = new THREE.LineSegments(edges, lineMat);
+      mesh.add(lineSegments);
+
+      return mesh;
+    }
+
+    // ----------------------------------------------------------------------------
+    // 3. GAME CONSTANTS & STATE
+    // ----------------------------------------------------------------------------
+    const LANE_WIDTH = 2.65;
+    const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
+
+    const RANKS = [
+      { name: 'Rookie', minScore: 0 },
+      { name: 'Street Cat', minScore: 500 },
+      { name: 'City Boss', minScore: 1500 },
+      { name: 'Gold Lion', minScore: 3200 },
+      { name: 'Saru Legend', minScore: 6000 }
+    ];
+
+    const state = {
+      status: 'START', // 'START' | 'PLAYING' | 'PAUSED' | 'GAMEOVER'
+      score: 0,
+      bestScore: 0,
+      coins: 0,
+      distance: 0,
+      speed: 23,
+      baseSpeed: 23,
+      maxSpeed: 54,
+      currentLane: 1, // 0 = Left, 1 = Center, 2 = Right
+      targetX: 0,
+      playerX: 0,
+      playerY: 0,
+      velocityY: 0,
+      gravity: -56,
+      jumpForce: 19.5,
+      isJumping: false,
+      isSliding: false,
+      slideTimer: 0,
+      slideDuration: 0.68,
+      runCycle: 0,
+      cameraMode: 'DYNAMIC', // 'DYNAMIC' | 'HIGH'
+      touchPadsMode: 'AUTO', // 'AUTO' | 'ON' | 'OFF'
+      // Active power-ups (in seconds remaining)
+      powerups: {
+        magnet: 0,
+        shield: false,
+        doubleScore: 0
+      },
+      // Spawner timers
+      spawnDistanceAccum: 0,
+      nextSpawnGap: 18,
+      sceneryAccum: 0,
+      screenShake: 0
+    };
+
+    // ----------------------------------------------------------------------------
+    // 4. SCENE, CAMERA, RENDERER & SKY DOME SETUP
+    // ----------------------------------------------------------------------------
+    const container = document.getElementById('game-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0xd9f99d, 55, 145);
+
+    const camera = new THREE.PerspectiveCamera(
+      62,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      200
+    );
+    camera.position.set(0, 5.4, 9.2);
+    camera.lookAt(0, 1.8, -10);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    container.insertBefore(renderer.domElement, container.firstChild);
+
+    // Lighting for vibrant cel-shaded pop
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xbef264, 0.95);
+    hemiLight.position.set(0, 40, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.85);
+    dirLight.position.set(16, 32, 18);
+    scene.add(dirLight);
+
+    // Striped Sunburst Sky Dome (inspired by hyper-casual vibrant backdrop)
+    function createStripedSkyDome() {
+      const skyGeo = new THREE.SphereGeometry(155, 32, 20);
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+
+      // Base sunny lime-sky gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, '#65a30d');
+      grad.addColorStop(0.45, '#84cc16');
+      grad.addColorStop(0.75, '#bef264');
+      grad.addColorStop(1, '#fef9c3');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 256);
+
+      // Subtle vertical sunbeam stripes
+      const stripeCount = 32;
+      const stripeW = 512 / stripeCount;
+      for (let i = 0; i < stripeCount; i++) {
+        if (i % 2 === 0) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+          ctx.fillRect(i * stripeW, 0, stripeW, 256);
+        }
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+
+      const skyMat = new THREE.MeshBasicMaterial({
+        map: tex,
+        side: THREE.BackSide,
+        fog: false
+      });
+
+      const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+      scene.add(skyMesh);
+      return skyMesh;
+    }
+
+    const skyDome = createStripedSkyDome();
+
+    // ----------------------------------------------------------------------------
+    // 5. TRACK, ROAD CURBS & SCROLLING WORLD ENVIRONMENT
+    // ----------------------------------------------------------------------------
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
+
+    // Bright white/pastel snow-bright ground plane outside the road
+    const groundGeo = new THREE.PlaneGeometry(260, 260);
+    const groundMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const groundPlane = new THREE.Mesh(groundGeo, groundMat);
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.position.y = -0.05;
+    groundPlane.position.z = -60;
+    scene.add(groundPlane);
+
+    // Main asphalt road surface
+    const ROAD_WIDTH = LANE_WIDTH * 3 + 1.4;
+    const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 220);
+    const roadMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.rotation.x = -Math.PI / 2;
+    roadMesh.position.y = 0.01;
+    roadMesh.position.z = -75;
+    scene.add(roadMesh);
+
+    // Glowing cyan center line
+    const centerLineGeo = new THREE.PlaneGeometry(0.28, 220);
+    const centerLineMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const centerLine = new THREE.Mesh(centerLineGeo, centerLineMat);
+    centerLine.rotation.x = -Math.PI / 2;
+    centerLine.position.y = 0.025;
+    centerLine.position.z = -75;
+    scene.add(centerLine);
+
+    // Scrolling road stripes & alternating Magenta/White curbs
+    const curbSegments = [];
+    const CURB_SEG_LEN = 5;
+    const NUM_CURB_SEGS = 36;
+
+    const magentaMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
+    const whiteCurbMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const blackBorderMat = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR });
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+    for (let i = 0; i < NUM_CURB_SEGS; i++) {
+      const segGroup = new THREE.Group();
+      const zPos = 15 - i * CURB_SEG_LEN;
+      segGroup.position.z = zPos;
+
+      const isPink = i % 2 === 0;
+      const curbMat = isPink ? magentaMat : whiteCurbMat;
+
+      // Left & right curbs with outer black ink border
+      [-1, 1].forEach((side) => {
+        const xBase = side * (ROAD_WIDTH / 2 + 0.32);
+        const curb = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.16, CURB_SEG_LEN), curbMat);
+        curb.position.set(xBase, 0.06, 0);
+        segGroup.add(curb);
+
+        const outerInk = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.19, CURB_SEG_LEN), blackBorderMat);
+        outerInk.position.set(xBase + side * 0.36, 0.07, 0);
+        segGroup.add(outerInk);
+      });
+
+      // Lane divider dashes
+      if (isPink) {
+        [-LANE_WIDTH / 2, LANE_WIDTH / 2].forEach((lx) => {
+          const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 2.2), dashMat);
+          dash.rotation.x = -Math.PI / 2;
+          dash.position.set(lx, 0.025, 0);
+          segGroup.add(dash);
+        });
+      }
+
+      scene.add(segGroup);
+      curbSegments.push(segGroup);
+    }
+
+    // Distant Stylized Flat-Topped Mesas & Puffy Outlined Clouds
+    const clouds = [];
+    function buildHorizonScenery() {
+      const mesaColors = [0xd9f99d, 0xfef08a, 0xbef264];
+      const mesaPositions = [
+        [-24, -85, 8, 7],
+        [26, -90, 9, 8],
+        [-38, -105, 11, 9],
+        [40, -100, 10, 8.5],
+        [-14, -115, 7, 5.5],
+        [15, -118, 7.5, 6]
+      ];
+
+      mesaPositions.forEach(([x, z, r, h], idx) => {
+        const geo = new THREE.CylinderGeometry(r * 0.58, r, h, 8);
+        const mesa = createToonMesh(geo, mesaColors[idx % mesaColors.length], {
+          outlineScale: [1.04, 1.03, 1.04]
+        });
+        mesa.position.set(x, h / 2 - 0.1, z);
+        scene.add(mesa);
+      });
+
+      // Puffy Outlined Cartoon Clouds
+      for (let i = 0; i < 10; i++) {
+        const cloudGroup = new THREE.Group();
+        const puffs = [
+          [0, 0, 0, 1.4],
+          [-1.1, -0.2, 0.1, 1.0],
+          [1.15, -0.15, -0.1, 1.05],
+          [0.4, 0.55, 0, 0.95]
+        ];
+        puffs.forEach(([px, py, pz, pr]) => {
+          const puff = createToonMesh(new THREE.SphereGeometry(pr, 12, 10), 0xffffff, {
+            outlineScale: 1.09
+          });
+          puff.position.set(px, py, pz);
+          cloudGroup.add(puff);
+        });
+        cloudGroup.position.set(
+          (Math.random() - 0.5) * 70,
+          13 + Math.random() * 8,
+          -40 - Math.random() * 65
+        );
+        scene.add(cloudGroup);
+        clouds.push(cloudGroup);
+      }
+    }
+    buildHorizonScenery();
+
+    // Roadside Props Pool (Pastel Villas, Modern Towers, Palm/Cactus Trees)
+    const roadsideProps = [];
+    const roofColors = [0xf472b6, 0x38bdf8, 0xfacc15, 0xa78bfa, 0x4ade80];
+
+    function spawnRoadsideProp(zPos) {
+      [-1, 1].forEach((side) => {
+        const propGroup = new THREE.Group();
+        const xOffset = side * (ROAD_WIDTH / 2 + 4.8 + Math.random() * 4.5);
+        propGroup.position.set(xOffset, 0, zPos - Math.random() * 4);
+
+        const kind = Math.random();
+        if (kind < 0.55) {
+          // Stylized Pastel House / Villa (inspired by bright cartoon houses)
+          const w = 3.2 + Math.random() * 1.2;
+          const h = 2.4 + Math.random() * 1.2;
+          const d = 3.2 + Math.random() * 1.2;
+          const body = createOutlinedBox(w, h, d, 0xffffff);
+          body.position.y = h / 2;
+          propGroup.add(body);
+
+          const roofColor = roofColors[Math.floor(Math.random() * roofColors.length)];
+          const roofGeo = new THREE.ConeGeometry(w * 0.78, 1.7, 4);
+          const roof = createToonMesh(roofGeo, roofColor, { outlineScale: 1.05 });
+          roof.rotation.y = Math.PI / 4;
+          roof.position.y = h + 0.82;
+          propGroup.add(roof);
+
+          // Door facing road
+          const door = createOutlinedBox(0.7, 1.2, 0.15, 0xf43f5e);
+          door.position.set(-side * (w / 2 + 0.02), 0.6, 0);
+          door.rotation.y = Math.PI / 2;
+          propGroup.add(door);
+
+          // Window
+          const win = createOutlinedBox(0.75, 0.65, 0.15, 0x7dd3fc);
+          win.position.set(-side * (w / 2 + 0.02), 1.45, 0.85);
+          win.rotation.y = Math.PI / 2;
+          propGroup.add(win);
+        } else if (kind < 0.82) {
+          // Stylized Cactus / Palm Totem with pink flower tip
+          const stem = createToonMesh(new THREE.CylinderGeometry(0.32, 0.36, 2.6, 10), 0xffffff, {
+            outlineScale: 1.12
+          });
+          stem.position.y = 1.3;
+          propGroup.add(stem);
+
+          const armL = createToonMesh(new THREE.CylinderGeometry(0.22, 0.22, 1.1, 8), 0xffffff, {
+            outlineScale: 1.14
+          });
+          armL.position.set(-0.55, 1.5, 0);
+          armL.rotation.z = Math.PI / 4;
+          propGroup.add(armL);
+
+          const armR = createToonMesh(new THREE.CylinderGeometry(0.22, 0.22, 1.1, 8), 0xffffff, {
+            outlineScale: 1.14
+          });
+          armR.position.set(0.55, 1.7, 0);
+          armR.rotation.z = -Math.PI / 4;
+          propGroup.add(armR);
+
+          const topBud = createToonMesh(new THREE.SphereGeometry(0.28, 10, 8), 0xec4899, {
+            outlineScale: 1.15
+          });
+          topBud.position.y = 2.65;
+          propGroup.add(topBud);
+        } else {
+          // Sleek Miniature City Tower (nod to Saru Bai's VIP skyline!)
+          const h = 5.5 + Math.random() * 4.5;
+          const tower = createOutlinedBox(2.4, h, 2.4, 0xe0f2fe);
+          tower.position.y = h / 2;
+          propGroup.add(tower);
+
+          const spire = createToonMesh(new THREE.ConeGeometry(0.35, 2.2, 6), 0xfacc15, {
+            outlineScale: 1.08
+          });
+          spire.position.y = h + 1.1;
+          propGroup.add(spire);
+        }
+
+        scene.add(propGroup);
+        roadsideProps.push(propGroup);
+      });
+    }
+
+    // Pre-populate initial scenery along the boulevard
+    for (let z = 10; z > -130; z -= 14) {
+      spawnRoadsideProp(z);
+    }
+
+    // ----------------------------------------------------------------------------
+    // 6. PROTAGONIST: "SARU BAI" 3D ARTICULATED CHARACTER
+    // Upgraded Royal White Lion Boss in Tailored Suit, Aviators & Triple Gold Chains
+    // ----------------------------------------------------------------------------
+    const saruGroup = new THREE.Group();
+    scene.add(saruGroup);
+
+    // Ground Target Ring beneath Saru Bai (high-visibility indicator)
+    const ringGeo = new THREE.RingGeometry(0.75, 1.05, 28);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xfacc15,
+      side: THREE.DoubleSide
+    });
+    const groundRing = new THREE.Mesh(ringGeo, ringMat);
+    groundRing.rotation.x = -Math.PI / 2;
+    groundRing.position.y = 0.04;
+    scene.add(groundRing);
+
+    const ringOutlineGeo = new THREE.RingGeometry(1.03, 1.14, 28);
+    const ringOutlineMat = new THREE.MeshBasicMaterial({
+      color: OUTLINE_COLOR,
+      side: THREE.DoubleSide
+    });
+    const groundRingOutline = new THREE.Mesh(ringOutlineGeo, ringOutlineMat);
+    groundRingOutline.rotation.x = -Math.PI / 2;
+    groundRingOutline.position.y = 0.042;
+    scene.add(groundRingOutline);
+
+    // Shield Bubble Visual (shown when VIP Shield power-up is active)
+    const shieldBubble = createToonMesh(
+      new THREE.SphereGeometry(1.65, 20, 16),
+      0x38bdf8,
+      { noOutline: true }
+    );
+    shieldBubble.material.transparent = true;
+    shieldBubble.material.opacity = 0.34;
+    shieldBubble.position.y = 1.4;
+    shieldBubble.visible = false;
+    saruGroup.add(shieldBubble);
+
+    // Character Rig Sub-Groups for smooth animation
+    const bodyRig = new THREE.Group();
+    saruGroup.add(bodyRig);
+
+    // --- TAILORED LUXURY SUIT TORSO ---
+    // Upper broad-shouldered chest jacket
+    const upperChest = createToonMesh(new THREE.BoxGeometry(1.04, 0.72, 0.58), 0x18181b, {
+      outlineScale: [1.07, 1.06, 1.11]
+    });
+    upperChest.position.y = 1.56;
+    bodyRig.add(upperChest);
+
+    // Tapered tailored waist
+    const lowerWaist = createToonMesh(new THREE.BoxGeometry(0.88, 0.46, 0.52), 0x18181b, {
+      outlineScale: [1.08, 1.07, 1.12]
+    });
+    lowerWaist.position.y = 1.06;
+    bodyRig.add(lowerWaist);
+
+    // Crisp white dress shirt V-front & upturned collar wings
+    const shirt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.78, 0.60),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    shirt.position.set(0, 1.52, -0.01);
+    bodyRig.add(shirt);
+
+    [-0.16, 0.16].forEach((cx) => {
+      const collarWing = createToonMesh(new THREE.BoxGeometry(0.16, 0.16, 0.24), 0xffffff, {
+        outlineScale: 1.12
+      });
+      collarWing.position.set(cx, 1.94, -0.14);
+      collarWing.rotation.z = cx < 0 ? 0.35 : -0.35;
+      collarWing.rotation.y = cx < 0 ? -0.25 : 0.25;
+      bodyRig.add(collarWing);
+    });
+
+    // Sculpted 3D Suit Lapels (left & right angled lapels)
+    [-0.24, 0.24].forEach((lx) => {
+      const lapel = createToonMesh(new THREE.BoxGeometry(0.17, 0.68, 0.08), 0x27272a, {
+        outlineScale: 1.1
+      });
+      lapel.position.set(lx, 1.58, -0.29);
+      lapel.rotation.z = lx < 0 ? -0.18 : 0.18;
+      bodyRig.add(lapel);
+    });
+
+    // Crisp White Folded Pocket Square on Left Breast Pocket
+    const pocketSquare = createToonMesh(new THREE.BoxGeometry(0.18, 0.11, 0.06), 0xffffff, {
+      outlineScale: 1.15
+    });
+    pocketSquare.position.set(0.33, 1.66, -0.30);
+    pocketSquare.rotation.z = -0.12;
+    bodyRig.add(pocketSquare);
+
+    // Gold Suit Jacket Buttons & Belt Buckle
+    [1.24, 1.05].forEach((by) => {
+      const btn = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10),
+        new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+      );
+      btn.rotation.x = Math.PI / 2;
+      btn.position.set(0, by, -0.28);
+      bodyRig.add(btn);
+    });
+
+    const beltBuckle = createToonMesh(new THREE.BoxGeometry(0.18, 0.11, 0.06), 0xfacc15, {
+      outlineScale: 1.15
+    });
+    beltBuckle.position.set(0, 0.88, -0.27);
+    bodyRig.add(beltBuckle);
+
+    // --- TRIPLE-LAYERED HEAVY GOLD CHAINS & LION MEDALLION ---
+    const chainConfigs = [
+      { radius: 0.16, tube: 0.026, y: 1.78, z: -0.30, rotX: 0.32 },
+      { radius: 0.22, tube: 0.032, y: 1.68, z: -0.31, rotX: 0.26 },
+      { radius: 0.28, tube: 0.036, y: 1.58, z: -0.32, rotX: 0.20 }
+    ];
+    chainConfigs.forEach((cfg) => {
+      const chain = createToonMesh(
+        new THREE.TorusGeometry(cfg.radius, cfg.tube, 8, 22),
+        0xfacc15,
+        { outlineScale: 1.14 }
+      );
+      chain.position.set(0, cfg.y, cfg.z);
+      chain.rotation.x = cfg.rotX;
+      bodyRig.add(chain);
+    });
+
+    const medallion = createToonMesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.055, 16),
+      0xfde047,
+      { outlineScale: 1.16 }
+    );
+    medallion.rotation.x = Math.PI / 2;
+    medallion.position.set(0, 1.34, -0.33);
+    bodyRig.add(medallion);
+
+    const medallionGem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.065, 0.065, 12),
+      new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+    );
+    medallionGem.rotation.x = Math.PI / 2;
+    medallionGem.position.set(0, 1.34, -0.335);
+    bodyRig.add(medallionGem);
+
+    // --- DYNAMIC WAGGING WHITE LION TAIL ---
+    const tailGroup = new THREE.Group();
+    tailGroup.position.set(0, 0.94, 0.26);
+    bodyRig.add(tailGroup);
+
+    const tailBase = createToonMesh(new THREE.CylinderGeometry(0.055, 0.075, 0.55, 8), 0xffffff, {
+      outlineScale: 1.18
+    });
+    tailBase.position.set(0, 0.12, 0.22);
+    tailBase.rotation.x = 0.85;
+    tailGroup.add(tailBase);
+
+    const tailMid = createToonMesh(new THREE.CylinderGeometry(0.048, 0.055, 0.48, 8), 0xffffff, {
+      outlineScale: 1.18
+    });
+    tailMid.position.set(0, 0.42, 0.42);
+    tailMid.rotation.x = 0.25;
+    tailGroup.add(tailMid);
+
+    const tailTuft = createToonMesh(new THREE.DodecahedronGeometry(0.18, 1), 0xfef9c3, {
+      outlineScale: 1.12
+    });
+    tailTuft.scale.set(0.95, 1.35, 0.95);
+    tailTuft.position.set(0, 0.68, 0.46);
+    tailGroup.add(tailTuft);
+
+    // --- HEAD & SCULPTED MULTI-TIERED WHITE LION MANE ---
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 2.36, 0);
+    bodyRig.add(headGroup);
+
+    const maneGroup = new THREE.Group();
+    headGroup.add(maneGroup);
+
+    // Voluminous rear mane cushion
+    const maneCore = createToonMesh(new THREE.DodecahedronGeometry(0.68, 1), 0xfefce8, {
+      outlineScale: 1.07
+    });
+    maneCore.scale.set(1.08, 1.14, 0.96);
+    maneCore.position.set(0, 0.04, 0.08);
+    maneGroup.add(maneCore);
+
+    // Royal upper pompadour / crown mane crest
+    const crownCrest = createToonMesh(new THREE.IcosahedronGeometry(0.46, 1), 0xffffff, {
+      outlineScale: 1.08
+    });
+    crownCrest.scale.set(1.18, 0.95, 1.05);
+    crownCrest.position.set(0, 0.52, -0.06);
+    maneGroup.add(crownCrest);
+
+    // Radial ring of 12 sculpted mane ruff tufts framing the face
+    const tuftCount = 12;
+    for (let i = 0; i < tuftCount; i++) {
+      const angle = (i / tuftCount) * Math.PI * 2;
+      // Skip directly over the front mouth/eyes opening, keep full halo around edge
+      const radiusX = 0.56;
+      const radiusY = 0.58;
+      const tx = Math.sin(angle) * radiusX;
+      const ty = Math.cos(angle) * radiusY + 0.02;
+      const tuftColor = i % 2 === 0 ? 0xffffff : 0xfef9c3;
+
+      const tuft = createToonMesh(new THREE.DodecahedronGeometry(0.24, 0), tuftColor, {
+        outlineScale: 1.1
+      });
+      tuft.position.set(tx, ty, -0.10 + Math.abs(Math.sin(angle)) * 0.06);
+      tuft.rotation.z = -angle;
+      tuft.scale.set(1.05, 1.25, 0.9);
+      maneGroup.add(tuft);
+    }
+
+    // Lush chest-draping mane bib tucked into the open shirt collar
+    const chestMane = createToonMesh(new THREE.DodecahedronGeometry(0.36, 1), 0xffffff, {
+      outlineScale: 1.09
+    });
+    chestMane.scale.set(1.05, 1.15, 0.72);
+    chestMane.position.set(0, -0.44, -0.22);
+    maneGroup.add(chestMane);
+
+    // --- EXPRESSIVE SCULPTED LION FACE ---
+    const face = createToonMesh(new THREE.SphereGeometry(0.46, 16, 14), 0xffffff, {
+      outlineScale: 1.07
+    });
+    face.position.set(0, -0.02, -0.24);
+    headGroup.add(face);
+
+    // Confident furrowed brow ridge above sunglasses
+    const browRidge = createToonMesh(new THREE.BoxGeometry(0.56, 0.11, 0.18), 0xfefce8, {
+      outlineScale: 1.12
+    });
+    browRidge.position.set(0, 0.19, -0.57);
+    headGroup.add(browRidge);
+
+    // Fluffy white cheek jowls
+    [-0.31, 0.31].forEach((cx) => {
+      const cheek = createToonMesh(new THREE.SphereGeometry(0.21, 12, 10), 0xffffff, {
+        outlineScale: 1.09
+      });
+      cheek.position.set(cx, -0.11, -0.43);
+      headGroup.add(cheek);
+    });
+
+    // Strong lion nose bridge
+    const snoutBridge = createToonMesh(new THREE.BoxGeometry(0.24, 0.20, 0.34), 0xfefce8, {
+      outlineScale: 1.1
+    });
+    snoutBridge.position.set(0, -0.04, -0.56);
+    headGroup.add(snoutBridge);
+
+    // Dual rounded lion whisker pads
+    [-0.11, 0.11].forEach((wx) => {
+      const pad = createToonMesh(new THREE.SphereGeometry(0.165, 12, 10), 0xfef3c7, {
+        outlineScale: 1.1
+      });
+      pad.position.set(wx, -0.13, -0.65);
+      headGroup.add(pad);
+
+      // Subtle dark whisker dots
+      [
+        [wx * 1.15, -0.11, -0.80],
+        [wx * 1.35, -0.15, -0.78]
+      ].forEach(([dx, dy, dz]) => {
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.018, 6, 6),
+          new THREE.MeshBasicMaterial({ color: 0x18181b })
+        );
+        dot.position.set(dx, dy, dz);
+        headGroup.add(dot);
+      });
+    });
+
+    // Sculpted dark triangular lion nose
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.105, 0.12, 4),
+      new THREE.MeshBasicMaterial({ color: 0x18181b })
+    );
+    nose.rotation.x = Math.PI;
+    nose.rotation.y = Math.PI / 4;
+    nose.position.set(0, -0.02, -0.78);
+    headGroup.add(nose);
+
+    // Confident lion chin & subtle fangs
+    const chin = createToonMesh(new THREE.SphereGeometry(0.16, 10, 8), 0xffffff, {
+      outlineScale: 1.1
+    });
+    chin.position.set(0, -0.27, -0.58);
+    headGroup.add(chin);
+
+    const mouthLine = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.028, 0.06),
+      new THREE.MeshBasicMaterial({ color: 0x18181b })
+    );
+    mouthLine.position.set(0, -0.22, -0.73);
+    headGroup.add(mouthLine);
+
+    [-0.075, 0.075].forEach((fx) => {
+      const fang = new THREE.Mesh(
+        new THREE.ConeGeometry(0.024, 0.055, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      fang.rotation.x = Math.PI;
+      fang.position.set(fx, -0.24, -0.74);
+      headGroup.add(fang);
+    });
+
+    // Detailed Rounded Lion Ears with Inner Warm Ear Hollows
+    [-0.42, 0.42].forEach((ex) => {
+      const earGroup = new THREE.Group();
+      earGroup.position.set(ex, 0.46, -0.12);
+      earGroup.rotation.z = ex < 0 ? 0.22 : -0.22;
+
+      const outerEar = createToonMesh(new THREE.CylinderGeometry(0.16, 0.16, 0.09, 14), 0xffffff, {
+        outlineScale: 1.15
+      });
+      outerEar.rotation.x = Math.PI / 2;
+      earGroup.add(outerEar);
+
+      const innerEar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.095, 0.095, 0.10, 12),
+        new THREE.MeshBasicMaterial({ color: 0xfde68a })
+      );
+      innerEar.rotation.x = Math.PI / 2;
+      innerEar.position.z = -0.008;
+      earGroup.add(innerEar);
+
+      headGroup.add(earGroup);
+    });
+
+    // --- ICONIC GOLD-RIMMED AVIATOR SUNGLASSES ---
+    const glassesGroup = new THREE.Group();
+    glassesGroup.position.set(0, 0.07, -0.64);
+    headGroup.add(glassesGroup);
+
+    const glassGlints = [];
+    [-0.20, 0.20].forEach((gx) => {
+      // Gold metallic aviator rim
+      const rim = new THREE.Mesh(
+        new THREE.BoxGeometry(0.34, 0.21, 0.06),
+        new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+      );
+      rim.position.set(gx, 0, 0.005);
+      glassesGroup.add(rim);
+
+      // Dark tinted lens
+      const lens = new THREE.Mesh(
+        new THREE.BoxGeometry(0.29, 0.165, 0.07),
+        new THREE.MeshBasicMaterial({ color: 0x09090b })
+      );
+      lens.position.set(gx, 0, 0);
+      glassesGroup.add(lens);
+
+      // Cool cyan/white reflection streak on shades
+      const glint = new THREE.Mesh(
+        new THREE.BoxGeometry(0.13, 0.032, 0.078),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+      );
+      glint.position.set(gx - 0.05, 0.035, -0.004);
+      glint.rotation.z = 0.35;
+      glassesGroup.add(glint);
+      glassGlints.push(glint);
+
+      // Gold temple arm tucking into mane
+      const temple = new THREE.Mesh(
+        new THREE.BoxGeometry(0.035, 0.035, 0.42),
+        new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+      );
+      temple.position.set(gx + (gx < 0 ? -0.16 : 0.16), 0.04, 0.21);
+      glassesGroup.add(temple);
+    });
+
+    // Double Aviator Brow Bar & Nose Bridge
+    const topBar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.44, 0.032, 0.07),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+    );
+    topBar.position.set(0, 0.08, 0);
+    glassesGroup.add(topBar);
+
+    const bridge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.038, 0.07),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+    );
+    bridge.position.set(0, 0.02, 0);
+    glassesGroup.add(bridge);
+
+    // --- ARTICULATED ARMS WITH CUFFS, GOLD WATCH & LION PAW PADS ---
+    function createArm(side) {
+      const armPivot = new THREE.Group();
+      armPivot.position.set(side * 0.65, 1.82, 0);
+
+      const sleeve = createToonMesh(new THREE.BoxGeometry(0.30, 0.68, 0.30), 0x18181b, {
+        outlineScale: 1.11
+      });
+      sleeve.position.y = -0.30;
+      armPivot.add(sleeve);
+
+      // Crisp white dress-shirt cuff
+      const cuff = createToonMesh(new THREE.BoxGeometry(0.27, 0.11, 0.27), 0xffffff, {
+        outlineScale: 1.13
+      });
+      cuff.position.y = -0.66;
+      armPivot.add(cuff);
+
+      // Luxury Gold Watch on Left Wrist
+      if (side === -1) {
+        const watch = createToonMesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), 0xfacc15, {
+          outlineScale: 1.14
+        });
+        watch.position.y = -0.66;
+        armPivot.add(watch);
+      }
+
+      // Detailed Lion Paw with Dark Paw Pads (nod to reference image!)
+      const pawGroup = new THREE.Group();
+      pawGroup.position.y = -0.80;
+      armPivot.add(pawGroup);
+
+      const palm = createToonMesh(new THREE.SphereGeometry(0.16, 12, 10), 0xffffff, {
+        outlineScale: 1.14
+      });
+      palm.scale.set(1.05, 1.1, 0.85);
+      pawGroup.add(palm);
+
+      // Dark charcoal central paw pad on the inner palm
+      const centerPad = new THREE.Mesh(
+        new THREE.SphereGeometry(0.075, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0x18181b })
+      );
+      centerPad.position.set(-side * 0.11, -0.02, -0.02);
+      pawGroup.add(centerPad);
+
+      // Four rounded lion finger/toe beans
+      [-0.08, -0.025, 0.03, 0.085].forEach((fz) => {
+        const toe = createToonMesh(new THREE.SphereGeometry(0.055, 8, 8), 0xffffff, {
+          outlineScale: 1.16
+        });
+        toe.position.set(0, -0.13, fz);
+        pawGroup.add(toe);
+      });
+
+      bodyRig.add(armPivot);
+      return armPivot;
+    }
+    const leftArm = createArm(-1);
+    const rightArm = createArm(1);
+
+    // --- ARTICULATED LEGS WITH TAILORED TROUSERS & TWO-TONE BOSS LOAFERS ---
+    function createLeg(side) {
+      const legPivot = new THREE.Group();
+      legPivot.position.set(side * 0.25, 0.85, 0);
+
+      const trouser = createToonMesh(new THREE.BoxGeometry(0.33, 0.72, 0.35), 0x0f172a, {
+        outlineScale: 1.11
+      });
+      trouser.position.y = -0.34;
+      legPivot.add(trouser);
+
+      // Sleek Two-Tone Boss Loafer (dark base + crisp white top vamp + gold buckle)
+      const shoeSole = createToonMesh(new THREE.BoxGeometry(0.35, 0.20, 0.54), 0x18181b, {
+        outlineScale: 1.12
+      });
+      shoeSole.position.set(0, -0.74, -0.08);
+      legPivot.add(shoeSole);
+
+      const shoeVamp = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.09, 0.34),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      shoeVamp.position.set(0, -0.65, -0.14);
+      legPivot.add(shoeVamp);
+
+      const shoeBuckle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.24, 0.05, 0.07),
+        new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+      );
+      shoeBuckle.position.set(0, -0.62, -0.14);
+      legPivot.add(shoeBuckle);
+
+      bodyRig.add(legPivot);
+      return legPivot;
+    }
+    const leftLeg = createLeg(-1);
+    const rightLeg = createLeg(1);
+
+    // ----------------------------------------------------------------------------
+    // 7. OBSTACLES, COINS, VIP CERTIFICATES & POWER-UPS
+    // ----------------------------------------------------------------------------
+    const obstacles = [];
+    const collectibles = [];
+
+    // Shared geometries for optimal performance
+    const coinGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.14, 16);
+    coinGeo.rotateX(Math.PI / 2);
+
+    /**
+     * Spawns a Gold Coin or VIP Golden Certificate at (laneIdx, y, z)
+     */
+    function spawnCollectible(laneIdx, y, z, type = 'COIN') {
+      const group = new THREE.Group();
+      group.position.set(LANES[laneIdx], y, z);
+
+      if (type === 'COIN') {
+        const mesh = createToonMesh(coinGeo, 0xfacc15, { outlineScale: 1.12 });
+        group.add(mesh);
+      } else if (type === 'CERT') {
+        // VIP Golden Certificate (a signature nod to Saru Bai's boss status!)
+        const card = createOutlinedBox(0.85, 1.05, 0.1, 0xfef08a);
+        const seal = createToonMesh(new THREE.CylinderGeometry(0.18, 0.18, 0.14, 12), 0xec4899, {
+          outlineScale: 1.15
+        });
+        seal.rotation.x = Math.PI / 2;
+        seal.position.set(0.18, -0.25, 0);
+        card.add(seal);
+        group.add(card);
+      } else if (type === 'MAGNET') {
+        const orb = createToonMesh(new THREE.OctahedronGeometry(0.55, 0), 0xa855f7, {
+          outlineScale: 1.14
+        });
+        group.add(orb);
+      } else if (type === 'SHIELD') {
+        const orb = createToonMesh(new THREE.OctahedronGeometry(0.55, 0), 0x38bdf8, {
+          outlineScale: 1.14
+        });
+        group.add(orb);
+      } else if (type === 'DOUBLE') {
+        const orb = createToonMesh(new THREE.OctahedronGeometry(0.55, 0), 0x4ade80, {
+          outlineScale: 1.14
+        });
+        group.add(orb);
+      }
+
+      scene.add(group);
+      collectibles.push({
+        mesh: group,
+        type,
+        collected: false,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    /**
+     * Spawns an obstacle in a given lane:
+     * - 'LOW_BARRIER': Jump over it (height ~ 1.15)
+     * - 'HIGH_GATE': Slide under it (bottom clearance = 1.35)
+     * - 'SUV': Tall vehicle blocking the lane (must switch lanes)
+     */
+    function spawnObstacle(laneIdx, z, type) {
+      const group = new THREE.Group();
+      group.position.set(LANES[laneIdx], 0, z);
+
+      let hitbox = { minY: 0, maxY: 1.2, halfW: 0.85, halfD: 0.65 };
+
+      if (type === 'LOW_BARRIER') {
+        // Red & White striped roadblock barrier
+        const board = createOutlinedBox(2.1, 0.72, 0.35, 0xf43f5e);
+        board.position.y = 0.75;
+        group.add(board);
+
+        const stripe = createOutlinedBox(0.65, 0.74, 0.38, 0xffffff);
+        stripe.position.y = 0.75;
+        group.add(stripe);
+
+        [-0.8, 0.8].forEach((px) => {
+          const post = createOutlinedBox(0.22, 1.1, 0.28, 0xfacc15);
+          post.position.set(px, 0.55, 0);
+          group.add(post);
+        });
+
+        hitbox = { minY: 0, maxY: 1.08, halfW: 0.92, halfD: 0.45 };
+      } else if (type === 'HIGH_GATE') {
+        // Elevated Overhead Archway — Slide underneath!
+        [-0.95, 0.95].forEach((px) => {
+          const pillar = createOutlinedBox(0.28, 3.1, 0.35, 0x38bdf8);
+          pillar.position.set(px, 1.55, 0);
+          group.add(pillar);
+        });
+
+        const topBanner = createOutlinedBox(2.25, 1.35, 0.45, 0xec4899);
+        topBanner.position.y = 2.25;
+        group.add(topBanner);
+
+        const trim = createOutlinedBox(2.28, 0.25, 0.48, 0xfacc15);
+        trim.position.y = 1.62;
+        group.add(trim);
+
+        // Player slides down to height ~0.95, so minY = 1.32 lets sliding player pass cleanly!
+        hitbox = { minY: 1.32, maxY: 3.1, halfW: 0.92, halfD: 0.48 };
+      } else if (type === 'SUV') {
+        // Stylized Outlined Boss SUV / Cruiser
+        const bodyColors = [0xfacc15, 0x38bdf8, 0xf43f5e, 0xa78bfa];
+        const carColor = bodyColors[Math.floor(Math.random() * bodyColors.length)];
+
+        const chassis = createOutlinedBox(2.05, 1.15, 4.1, carColor);
+        chassis.position.y = 0.85;
+        group.add(chassis);
+
+        const cabin = createOutlinedBox(1.85, 0.88, 2.35, 0xffffff);
+        cabin.position.set(0, 1.82, 0.25);
+        group.add(cabin);
+
+        // Tinted windshield
+        const windshield = createOutlinedBox(1.65, 0.62, 0.1, 0x1e293b);
+        windshield.position.set(0, 1.8, -0.94);
+        group.add(windshield);
+
+        // Wheels
+        [
+          [-0.98, 0.42, -1.25],
+          [0.98, 0.42, -1.25],
+          [-0.98, 0.42, 1.25],
+          [0.98, 0.42, 1.25]
+        ].forEach(([wx, wy, wz]) => {
+          const wheel = createToonMesh(new THREE.CylinderGeometry(0.42, 0.42, 0.28, 12), 0x18181b, {
+            noOutline: true
+          });
+          wheel.rotation.z = Math.PI / 2;
+          wheel.position.set(wx, wy, wz);
+          group.add(wheel);
+        });
+
+        hitbox = { minY: 0, maxY: 2.35, halfW: 0.94, halfD: 1.95 };
+      }
+
+      scene.add(group);
+      obstacles.push({
+        mesh: group,
+        type,
+        hitbox,
+        passed: false
+      });
+    }
+
+    /**
+     * Generates fair, fun Temple Run style wave patterns
+     */
+    function generateWave(zStart) {
+      const pattern = Math.random();
+      const lanes = [0, 1, 2];
+      // Shuffle lanes
+      for (let i = lanes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [lanes[i], lanes[j]] = [lanes[j], lanes[i]];
+      }
+
+      if (pattern < 0.28) {
+        // Pattern 1: Jumpable Barrier with Coin Arc over it + SUV in another lane
+        spawnObstacle(lanes[0], zStart, 'LOW_BARRIER');
+        spawnObstacle(lanes[1], zStart, 'SUV');
+        for (let i = -2; i <= 2; i++) {
+          const arcY = 0.8 + (1 - (i * i) / 5) * 1.9;
+          spawnCollectible(lanes[0], arcY, zStart + i * 1.6, i === 0 && Math.random() < 0.35 ? 'CERT' : 'COIN');
+        }
+      } else if (pattern < 0.56) {
+        // Pattern 2: High Slide Gate with low trail of coins underneath
+        spawnObstacle(lanes[0], zStart, 'HIGH_GATE');
+        if (Math.random() < 0.65) {
+          spawnObstacle(lanes[1], zStart, 'LOW_BARRIER');
+        }
+        for (let i = -2; i <= 2; i++) {
+          spawnCollectible(lanes[0], 0.55, zStart + i * 1.7, 'COIN');
+        }
+      } else if (pattern < 0.82) {
+        // Pattern 3: Two SUVs blocking 2 lanes, open 3rd lane has coin ribbon or powerup
+        spawnObstacle(lanes[0], zStart, 'SUV');
+        spawnObstacle(lanes[1], zStart, 'SUV');
+        for (let i = -2; i <= 2; i++) {
+          let itemType = 'COIN';
+          if (i === 0 && Math.random() < 0.28) {
+            const pTypes = ['MAGNET', 'SHIELD', 'DOUBLE', 'CERT'];
+            itemType = pTypes[Math.floor(Math.random() * pTypes.length)];
+          }
+          spawnCollectible(lanes[2], 0.85, zStart + i * 1.8, itemType);
+        }
+      } else {
+        // Pattern 4: Staggered Slalom (Barrier -> Gate across lanes)
+        spawnObstacle(lanes[0], zStart, 'LOW_BARRIER');
+        spawnObstacle(lanes[1], zStart - 7, 'HIGH_GATE');
+        spawnCollectible(lanes[2], 0.85, zStart - 2, 'CERT');
+        spawnCollectible(lanes[2], 0.85, zStart - 5, 'COIN');
+      }
+    }
+
+    // ----------------------------------------------------------------------------
+    // 8. UI ELEMENTS & FEEDBACK HELPERS
+    // ----------------------------------------------------------------------------
+    const ui = {
+      scoreDisplay: document.getElementById('score-display'),
+      coinCount: document.getElementById('coin-count'),
+      rankLabel: document.getElementById('rank-label'),
+      rankFill: document.getElementById('rank-progress-fill'),
+      powerupBar: document.getElementById('powerup-bar'),
+      floatingFeedback: document.getElementById('floating-feedback'),
+      hintBanner: document.getElementById('hint-banner'),
+      startOverlay: document.getElementById('start-overlay'),
+      pauseOverlay: document.getElementById('pause-overlay'),
+      gameoverOverlay: document.getElementById('gameover-overlay'),
+      finalScore: document.getElementById('final-score'),
+      bestScore: document.getElementById('best-score'),
+      finalCoins: document.getElementById('final-coins'),
+      newBestPill: document.getElementById('new-best-pill'),
+      mobilePads: document.getElementById('mobile-pads')
+    };
+
+    function showFloatingMessage(text, color = '#fde047') {
+      const el = document.createElement('div');
+      el.className = 'float-msg';
+      el.style.color = color;
+      el.textContent = text;
+      ui.floatingFeedback.appendChild(el);
+      setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 850);
+    }
+
+    function updateHUD() {
+      const displayScore = Math.floor(state.score);
+      ui.scoreDisplay.textContent = displayScore.toLocaleString();
+      ui.coinCount.textContent = state.coins.toLocaleString();
+
+      // Determine current Rank and progress bar percentage
+      let currentRankIdx = 0;
+      for (let i = RANKS.length - 1; i >= 0; i--) {
+        if (displayScore >= RANKS[i].minScore) {
+          currentRankIdx = i;
+          break;
+        }
+      }
+      const currRank = RANKS[currentRankIdx];
+      const nextRank = RANKS[currentRankIdx + 1];
+      ui.rankLabel.textContent = currRank.name;
+
+      if (nextRank) {
+        const pct = ((displayScore - currRank.minScore) / (nextRank.minScore - currRank.minScore)) * 100;
+        ui.rankFill.style.width = `${Math.min(100, Math.max(4, pct))}%`;
+      } else {
+        ui.rankFill.style.width = '100%';
+      }
+
+      // Render active power-up chips
+      const chips = [];
+      if (state.powerups.shield) {
+        chips.push(`<div class="powerup-chip" style="color:#38bdf8;">🛡️ VIP SHIELD</div>`);
+      }
+      if (state.powerups.magnet > 0) {
+        chips.push(`<div class="powerup-chip" style="color:#e879f9;">🧲 MAGNET ${state.powerups.magnet.toFixed(1)}s</div>`);
+      }
+      if (state.powerups.doubleScore > 0) {
+        chips.push(`<div class="powerup-chip" style="color:#4ade80;">⚡ 2X SCORE ${state.powerups.doubleScore.toFixed(1)}s</div>`);
+      }
+      ui.powerupBar.innerHTML = chips.join('');
+    }
+
+    // ----------------------------------------------------------------------------
+    // 9. PLAYER ACTIONS & INPUT HANDLING (MOBILE SWIPE + LAPTOP KEYBOARD)
+    // ----------------------------------------------------------------------------
+    function moveLeft() {
+      if (state.status !== 'PLAYING') return;
+      if (state.currentLane > 0) {
+        state.currentLane--;
+        state.targetX = LANES[state.currentLane];
+        sfx.playLaneSwitch();
+      }
+    }
+
+    function moveRight() {
+      if (state.status !== 'PLAYING') return;
+      if (state.currentLane < 2) {
+        state.currentLane++;
+        state.targetX = LANES[state.currentLane];
+        sfx.playLaneSwitch();
+      }
+    }
+
+    function triggerJump() {
+      if (state.status !== 'PLAYING') return;
+      if (!state.isJumping) {
+        state.isJumping = true;
+        state.velocityY = state.jumpForce;
+        // Cancel slide if jumping
+        if (state.isSliding) {
+          state.isSliding = false;
+          state.slideTimer = 0;
+        }
+        sfx.playJump();
+      }
+    }
+
+    function triggerSlide() {
+      if (state.status !== 'PLAYING') return;
+      // Fast-drop if mid-air, then slide immediately!
+      if (state.isJumping) {
+        state.velocityY = -36;
+      }
+      state.isSliding = true;
+      state.slideTimer = state.slideDuration;
+      sfx.playSlide();
+    }
+
+    // Keyboard Controls (Laptop)
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+
+      if (state.status === 'START' && (e.code === 'Space' || e.code === 'Enter')) {
+        startGame();
+        return;
+      }
+
+      if (state.status === 'GAMEOVER' && (e.code === 'Space' || e.code === 'Enter')) {
+        startGame();
+        return;
+      }
+
+      if (e.code === 'KeyP' || e.code === 'Escape') {
+        if (state.status === 'PLAYING') pauseGame();
+        else if (state.status === 'PAUSED') resumeGame();
+        return;
+      }
+
+      if (state.status !== 'PLAYING') return;
+
+      switch (e.code) {
+        case 'ArrowLeft':
+        case 'KeyA':
+          moveLeft();
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          moveRight();
+          break;
+        case 'ArrowUp':
+        case 'KeyW':
+        case 'Space':
+          triggerJump();
+          break;
+        case 'ArrowDown':
+        case 'KeyS':
+          triggerSlide();
+          break;
+      }
+    });
+
+    // Mobile Swipe Gesture Recognition (Low-latency continuous detection)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let swipeHandled = false;
+    const SWIPE_THRESHOLD = 28;
+
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        swipeHandled = false;
+      }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+      if (state.status !== 'PLAYING' || swipeHandled || e.touches.length === 0) return;
+
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+
+      if (Math.abs(dx) > SWIPE_THRESHOLD || Math.abs(dy) > SWIPE_THRESHOLD) {
+        swipeHandled = true;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx < 0) moveLeft();
+          else moveRight();
+        } else {
+          if (dy < 0) triggerJump();
+          else triggerSlide();
+        }
+      }
+    }, { passive: true });
+
+    // Optional on-screen mobile tap pads
+    document.querySelectorAll('.touch-pad-btn').forEach((btn) => {
+      btn.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        const act = btn.getAttribute('data-action');
+        if (act === 'left') moveLeft();
+        if (act === 'right') moveRight();
+        if (act === 'jump') triggerJump();
+        if (act === 'slide') triggerSlide();
+      }, { passive: true });
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const act = btn.getAttribute('data-action');
+        if (act === 'left') moveLeft();
+        if (act === 'right') moveRight();
+        if (act === 'jump') triggerJump();
+        if (act === 'slide') triggerSlide();
+      });
+    });
+
+    // ----------------------------------------------------------------------------
+    // 10. GAME LIFECYCLE (START, PAUSE, RESUME, GAMEOVER)
+    // ----------------------------------------------------------------------------
+    function clearEntities() {
+      obstacles.forEach((o) => scene.remove(o.mesh));
+      obstacles.length = 0;
+      collectibles.forEach((c) => scene.remove(c.mesh));
+      collectibles.length = 0;
+    }
+
+    function startGame() {
+      sfx.init();
+      clearEntities();
+
+      state.status = 'PLAYING';
+      state.score = 0;
+      state.coins = 0;
+      state.distance = 0;
+      state.speed = state.baseSpeed;
+      state.currentLane = 1;
+      state.targetX = 0;
+      state.playerX = 0;
+      state.playerY = 0;
+      state.velocityY = 0;
+      state.isJumping = false;
+      state.isSliding = false;
+      state.slideTimer = 0;
+      state.powerups = { magnet: 0, shield: false, doubleScore: 0 };
+      state.spawnDistanceAccum = 0;
+      state.nextSpawnGap = 20;
+      state.screenShake = 0;
+
+      // Reset character pose
+      saruGroup.position.set(0, 0, 0);
+      saruGroup.rotation.set(0, 0, 0);
+      bodyRig.rotation.set(0, 0, 0);
+      bodyRig.scale.set(1, 1, 1);
+      tailGroup.rotation.set(0, 0, 0);
+      maneGroup.position.set(0, 0, 0);
+      shieldBubble.visible = false;
+
+      // Hide overlays
+      ui.startOverlay.classList.add('hidden');
+      ui.pauseOverlay.classList.add('hidden');
+      ui.gameoverOverlay.classList.add('hidden');
+
+      // Spawn initial welcoming coin trail & first waves ahead
+      for (let i = 0; i < 5; i++) {
+        spawnCollectible(1, 0.85, -16 - i * 2.2, 'COIN');
+      }
+      generateWave(-38);
+      generateWave(-62);
+      generateWave(-86);
+
+      // Auto-enable touch pads on mobile touch devices if set to AUTO
+      applyTouchPadVisibility();
+      updateHUD();
+
+      // Fade out hint banner after 5 seconds of running
+      ui.hintBanner.style.opacity = '1';
+      clearTimeout(window._hintTimeout);
+      window._hintTimeout = setTimeout(() => {
+        ui.hintBanner.style.opacity = '0';
+      }, 5000);
+    }
+
+    function pauseGame() {
+      if (state.status !== 'PLAYING') return;
+      state.status = 'PAUSED';
+      ui.pauseOverlay.classList.remove('hidden');
+    }
+
+    function resumeGame() {
+      if (state.status !== 'PAUSED') return;
+      state.status = 'PLAYING';
+      ui.pauseOverlay.classList.add('hidden');
+      lastFrameTime = performance.now();
+    }
+
+    function triggerGameOver() {
+      state.status = 'GAMEOVER';
+      state.screenShake = 0.45;
+      sfx.playCrash();
+
+      const finalScoreInt = Math.floor(state.score);
+      const isNewBest = finalScoreInt > state.bestScore;
+      if (isNewBest) {
+        state.bestScore = finalScoreInt;
+      }
+
+      ui.finalScore.textContent = finalScoreInt.toLocaleString();
+      ui.bestScore.textContent = state.bestScore.toLocaleString();
+      ui.finalCoins.textContent = state.coins.toLocaleString();
+
+      if (isNewBest && finalScoreInt > 0) {
+        ui.newBestPill.classList.remove('hidden');
+      } else {
+        ui.newBestPill.classList.add('hidden');
+      }
+
+      ui.gameoverOverlay.classList.remove('hidden');
+    }
+
+    function applyTouchPadVisibility() {
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (state.touchPadsMode === 'ON' || (state.touchPadsMode === 'AUTO' && isTouch)) {
+        ui.mobilePads.classList.add('enabled');
+      } else {
+        ui.mobilePads.classList.remove('enabled');
+      }
+    }
+
+    // Button Event Bindings
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('retry-btn').addEventListener('click', startGame);
+    document.getElementById('restart-from-pause-btn').addEventListener('click', startGame);
+    document.getElementById('pause-btn').addEventListener('click', () => {
+      if (state.status === 'PLAYING') pauseGame();
+      else if (state.status === 'PAUSED') resumeGame();
+    });
+    document.getElementById('resume-btn').addEventListener('click', resumeGame);
+
+    document.getElementById('sound-toggle-btn').addEventListener('click', () => {
+      const isOn = sfx.toggle();
+      document.getElementById('sound-icon').textContent = isOn ? '🔊' : '🔇';
+      document.getElementById('sound-text').textContent = isOn ? 'Sound: ON' : 'Sound: OFF';
+    });
+
+    document.getElementById('cam-toggle-btn').addEventListener('click', () => {
+      state.cameraMode = state.cameraMode === 'DYNAMIC' ? 'HIGH' : 'DYNAMIC';
+      document.getElementById('cam-text').textContent =
+        state.cameraMode === 'DYNAMIC' ? 'Cam: Dynamic' : 'Cam: Wide';
+    });
+
+    document.getElementById('pads-toggle-btn').addEventListener('click', () => {
+      const modes = ['AUTO', 'ON', 'OFF'];
+      const next = modes[(modes.indexOf(state.touchPadsMode) + 1) % modes.length];
+      state.touchPadsMode = next;
+      document.getElementById('pads-text').textContent =
+        next === 'AUTO' ? 'Touch Pads: Auto' : next === 'ON' ? 'Touch Pads: ON' : 'Touch Pads: OFF';
+      applyTouchPadVisibility();
+    });
+
+    // ----------------------------------------------------------------------------
+    // 11. MAIN SIMULATION & ANIMATION LOOP
+    // ----------------------------------------------------------------------------
+    let lastFrameTime = performance.now();
+
+    function updateSimulation(dt) {
+      // Gentle cloud drift in all states
+      clouds.forEach((cloud, idx) => {
+        cloud.position.x += (idx % 2 === 0 ? 0.5 : -0.4) * dt;
+        if (cloud.position.x > 45) cloud.position.x = -45;
+        if (cloud.position.x < -45) cloud.position.x = 45;
+      });
+
+      if (state.status === 'START') {
+        // Showcase Saru Bai facing the camera with a confident Boss Boss-Bounce & Tail Wag!
+        saruGroup.rotation.y = Math.PI;
+        state.runCycle += dt * 4.2;
+        const t = performance.now() * 0.001;
+
+        bodyRig.position.y = Math.abs(Math.sin(state.runCycle)) * 0.08;
+        maneGroup.position.y = Math.sin(state.runCycle * 2) * 0.02;
+        headGroup.rotation.y = Math.sin(t * 1.4) * 0.14;
+        headGroup.rotation.z = Math.cos(t * 1.1) * 0.05;
+
+        // Confident open-arm boss stance (inspired by reference image!)
+        leftArm.rotation.x = -0.25 + Math.sin(state.runCycle) * 0.08;
+        leftArm.rotation.z = -0.28;
+        rightArm.rotation.x = -0.25 - Math.sin(state.runCycle) * 0.08;
+        rightArm.rotation.z = 0.28;
+
+        leftLeg.rotation.x = 0;
+        rightLeg.rotation.x = 0;
+
+        // Playful lion tail wag
+        tailGroup.rotation.z = Math.sin(t * 5.0) * 0.35;
+        tailGroup.rotation.y = Math.cos(t * 2.5) * 0.2;
+
+        // Subtle showcase camera orbit framing Saru Bai above the start card
+        camera.position.set(Math.sin(t * 0.75) * 1.4, 3.3, 6.2);
+        camera.lookAt(0, 1.85, 0);
+        return;
+      }
+
+      // Ensure Saru Bai faces forward down the boulevard during gameplay
+      saruGroup.rotation.y = 0;
+      leftArm.rotation.z = 0;
+      rightArm.rotation.z = 0;
+
+      if (state.status !== 'PLAYING') return;
+
+      // 1. Speed & Score Progression
+      state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.distance * 0.014);
+      const stepDist = state.speed * dt;
+      state.distance += stepDist;
+
+      const scoreMult = state.powerups.doubleScore > 0 ? 2 : 1;
+      state.score += stepDist * 1.4 * scoreMult;
+
+      // 2. Power-up Timers
+      if (state.powerups.magnet > 0) {
+        state.powerups.magnet = Math.max(0, state.powerups.magnet - dt);
+      }
+      if (state.powerups.doubleScore > 0) {
+        state.powerups.doubleScore = Math.max(0, state.powerups.doubleScore - dt);
+      }
+      shieldBubble.visible = state.powerups.shield;
+      if (state.powerups.shield) {
+        shieldBubble.rotation.y += dt * 2.2;
+      }
+
+      // 3. Player Horizontal Lane Interpolation & Tilt
+      const prevX = state.playerX;
+      state.playerX += (state.targetX - state.playerX) * Math.min(1, dt * 15);
+      const lateralVel = (state.playerX - prevX) / Math.max(0.001, dt);
+      saruGroup.position.x = state.playerX;
+
+      // Ground Ring tracks X and scales smoothly with Jump height
+      groundRing.position.x = state.playerX;
+      groundRingOutline.position.x = state.playerX;
+      const ringScale = Math.max(0.55, 1 - state.playerY * 0.12);
+      groundRing.scale.setScalar(ringScale);
+      groundRingOutline.scale.setScalar(ringScale);
+
+      // 4. Vertical Jump Physics
+      if (state.isJumping) {
+        state.playerY += state.velocityY * dt;
+        state.velocityY += state.gravity * dt;
+        if (state.playerY <= 0) {
+          state.playerY = 0;
+          state.velocityY = 0;
+          state.isJumping = false;
+        }
+      }
+      saruGroup.position.y = state.playerY;
+
+      // 5. Slide Timer & Character Body Rig Animation
+      if (state.isSliding) {
+        state.slideTimer -= dt;
+        if (state.slideTimer <= 0) {
+          state.isSliding = false;
+        }
+      }
+
+      if (state.isSliding) {
+        // Sleek low slide pose!
+        bodyRig.scale.lerp(new THREE.Vector3(1.12, 0.44, 1.15), Math.min(1, dt * 20));
+        bodyRig.rotation.x = 0.65;
+        bodyRig.rotation.z = -lateralVel * 0.025;
+        bodyRig.position.y = 0;
+      } else {
+        bodyRig.scale.lerp(new THREE.Vector3(1, 1, 1), Math.min(1, dt * 18));
+        bodyRig.rotation.x = state.isJumping ? -0.18 : 0.08;
+        bodyRig.rotation.z = -lateralVel * 0.03;
+
+        if (state.isJumping) {
+          // Heroic mid-air leap pose
+          leftLeg.rotation.x = 0.65;
+          rightLeg.rotation.x = -0.55;
+          leftArm.rotation.x = -0.85;
+          rightArm.rotation.x = 0.75;
+          bodyRig.position.y = 0;
+          maneGroup.position.y = -0.03;
+          tailGroup.rotation.x = -0.35;
+          tailGroup.rotation.z = Math.sin(performance.now() * 0.012) * 0.25;
+        } else {
+          // Energetic running cycle with bouncing mane & wagging lion tail
+          state.runCycle += dt * (state.speed * 0.58);
+          bodyRig.position.y = Math.abs(Math.sin(state.runCycle)) * 0.18;
+          maneGroup.position.y = Math.sin(state.runCycle * 2 - 0.5) * 0.035;
+          headGroup.rotation.y = -lateralVel * 0.025;
+          tailGroup.rotation.x = 0;
+          tailGroup.rotation.z = Math.sin(state.runCycle) * 0.42;
+          leftLeg.rotation.x = Math.sin(state.runCycle) * 0.95;
+          rightLeg.rotation.x = -Math.sin(state.runCycle) * 0.95;
+          leftArm.rotation.x = -Math.sin(state.runCycle) * 0.85;
+          rightArm.rotation.x = Math.sin(state.runCycle) * 0.85;
+        }
+      }
+
+      // 6. Scroll Road Curbs & Roadside Scenery
+      const totalTrackLen = NUM_CURB_SEGS * CURB_SEG_LEN;
+      curbSegments.forEach((seg) => {
+        seg.position.z += stepDist;
+        if (seg.position.z > 20) {
+          seg.position.z -= totalTrackLen;
+        }
+      });
+
+      state.sceneryAccum += stepDist;
+      if (state.sceneryAccum >= 14) {
+        state.sceneryAccum = 0;
+        spawnRoadsideProp(-130);
+      }
+
+      for (let i = roadsideProps.length - 1; i >= 0; i--) {
+        const prop = roadsideProps[i];
+        prop.position.z += stepDist;
+        if (prop.position.z > 18) {
+          scene.remove(prop);
+          roadsideProps.splice(i, 1);
+        }
+      }
+
+      // 7. Spawn New Obstacle & Collectible Waves
+      state.spawnDistanceAccum += stepDist;
+      if (state.spawnDistanceAccum >= state.nextSpawnGap) {
+        state.spawnDistanceAccum = 0;
+        // Dynamically adjust wave spacing with speed so patterns remain 100% fair
+        state.nextSpawnGap = Math.max(19, state.speed * 0.78);
+        generateWave(-115);
+      }
+
+      // 8. Update Collectibles & Magnet Attraction
+      const playerCenterY = state.playerY + (state.isSliding ? 0.5 : 1.2);
+      for (let i = collectibles.length - 1; i >= 0; i--) {
+        const item = collectibles[i];
+        item.mesh.position.z += stepDist;
+        item.mesh.rotation.y += dt * 3.4;
+        item.phase += dt * 5;
+        item.mesh.position.y += Math.sin(item.phase) * 0.006;
+
+        // Coin Magnet Pull
+        if (state.powerups.magnet > 0 && item.type === 'COIN' && item.mesh.position.z > -26 && item.mesh.position.z < 4) {
+          item.mesh.position.x += (state.playerX - item.mesh.position.x) * Math.min(1, dt * 11);
+          item.mesh.position.y += (playerCenterY - item.mesh.position.y) * Math.min(1, dt * 11);
+        }
+
+        // Check Pickup Collision
+        const dx = Math.abs(item.mesh.position.x - state.playerX);
+        const dy = Math.abs(item.mesh.position.y - playerCenterY);
+        const dz = Math.abs(item.mesh.position.z - 0);
+
+        if (!item.collected && dx < 1.15 && dy < 1.35 && dz < 1.15) {
+          item.collected = true;
+          const mult = state.powerups.doubleScore > 0 ? 2 : 1;
+
+          if (item.type === 'COIN') {
+            state.coins += 1 * mult;
+            state.score += 15 * mult;
+            sfx.playCoin();
+          } else if (item.type === 'CERT') {
+            state.coins += 5 * mult;
+            state.score += 100 * mult;
+            sfx.playPowerup();
+            showFloatingMessage(`📜 VIP CERTIFICATE +${100 * mult}!`, '#fde047');
+          } else if (item.type === 'MAGNET') {
+            state.powerups.magnet = 10;
+            sfx.playPowerup();
+            showFloatingMessage('🧲 COIN MAGNET!', '#e879f9');
+          } else if (item.type === 'SHIELD') {
+            state.powerups.shield = true;
+            sfx.playPowerup();
+            showFloatingMessage('🛡️ VIP SHIELD!', '#38bdf8');
+          } else if (item.type === 'DOUBLE') {
+            state.powerups.doubleScore = 10;
+            sfx.playPowerup();
+            showFloatingMessage('⚡ 2X SCORE BOOST!', '#4ade80');
+          }
+
+          scene.remove(item.mesh);
+          collectibles.splice(i, 1);
+          continue;
+        }
+
+        if (item.mesh.position.z > 12) {
+          scene.remove(item.mesh);
+          collectibles.splice(i, 1);
+        }
+      }
+
+      // 9. Update Obstacles & Fair AABB Collision Detection
+      const pMinY = state.playerY + 0.05;
+      const pMaxY = state.playerY + (state.isSliding ? 0.92 : 2.35);
+      const pHalfW = 0.48;
+      const pHalfD = 0.42;
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.mesh.position.z += stepDist;
+
+        const oz = obs.mesh.position.z;
+        const ox = obs.mesh.position.x;
+        const hb = obs.hitbox;
+
+        const overlapX = Math.abs(ox - state.playerX) < (hb.halfW + pHalfW);
+        const overlapZ = Math.abs(oz - 0) < (hb.halfD + pHalfD);
+        const overlapY = pMaxY > hb.minY && pMinY < hb.maxY;
+
+        if (overlapX && overlapZ && overlapY) {
+          if (state.powerups.shield) {
+            // Smash obstacle with VIP Shield!
+            state.powerups.shield = false;
+            state.screenShake = 0.3;
+            sfx.playShieldBreak();
+            showFloatingMessage('🛡️ SHIELD SMASH!', '#38bdf8');
+            scene.remove(obs.mesh);
+            obstacles.splice(i, 1);
+            continue;
+          } else {
+            triggerGameOver();
+            return;
+          }
+        }
+
+        if (oz > 15) {
+          scene.remove(obs.mesh);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // 10. Dynamic Camera Follow & Speed FOV
+      const targetCamY = state.cameraMode === 'HIGH' ? 7.4 : 5.3 + state.playerY * 0.35;
+      const targetCamZ = state.cameraMode === 'HIGH' ? 10.8 : 9.0;
+      const targetCamX = state.playerX * 0.52;
+
+      camera.position.x += (targetCamX - camera.position.x) * Math.min(1, dt * 8);
+      camera.position.y += (targetCamY - camera.position.y) * Math.min(1, dt * 8);
+      camera.position.z += (targetCamZ - camera.position.z) * Math.min(1, dt * 8);
+
+      if (state.screenShake > 0) {
+        state.screenShake = Math.max(0, state.screenShake - dt);
+        camera.position.x += (Math.random() - 0.5) * state.screenShake * 1.4;
+        camera.position.y += (Math.random() - 0.5) * state.screenShake * 1.4;
+      }
+
+      const targetFov = 62 + ((state.speed - state.baseSpeed) / (state.maxSpeed - state.baseSpeed)) * 10;
+      camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
+      camera.updateProjectionMatrix();
+      camera.lookAt(state.playerX * 0.35, 1.75 + state.playerY * 0.25, -10);
+
+      updateHUD();
+    }
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+      lastFrameTime = now;
+
+      updateSimulation(dt);
+      renderer.render(scene, camera);
+    }
+
+    // ----------------------------------------------------------------------------
+    // 12. RESPONSIVE RESIZE & WINDOW ONLOAD BOOTSTRAP
+    // ----------------------------------------------------------------------------
+    function handleResize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    window.onload = function () {
+      handleResize();
+      applyTouchPadVisibility();
+      updateHUD();
+      lastFrameTime = performance.now();
+      animate(lastFrameTime);
+    };
+  </script>
+</body>
+</html>
