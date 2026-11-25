@@ -203,17 +203,16 @@
     .hud-right {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       pointer-events: auto;
     }
 
     .icon-btn {
-      padding: 7px 12px;
+      padding: 7px 14px;
       font-size: 0.9rem;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      justify-content: center;
       gap: 5px;
     }
 
@@ -236,6 +235,45 @@
       font-weight: 700;
       box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
       animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Bottom control bar & hint toast */
+    .hud-bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .hint-banner {
+      background: rgba(24, 24, 27, 0.82);
+      color: #ffffff;
+      border: 2.5px solid #18181b;
+      border-radius: 9999px;
+      padding: 7px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      text-align: center;
+      transition: opacity 0.4s ease;
+    }
+
+    .bottom-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .bottom-pill-item {
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
     }
 
     /* Floating combo / pickup popup */
@@ -376,6 +414,36 @@
       letter-spacing: 0.04em;
     }
 
+    /* Mobile quick-tap pads (optional helper for users who prefer tapping over swiping) */
+    .mobile-touch-pads {
+      display: none;
+      width: 100%;
+      max-width: 440px;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .touch-pad-btn {
+      flex: 1;
+      padding: 12px 0;
+      background: rgba(255, 255, 255, 0.88);
+      border: 3px solid #18181b;
+      border-radius: 18px;
+      box-shadow: 0 4px 0 #18181b;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #18181b;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .touch-pad-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #18181b;
+      background: #fde047;
+    }
+
     @media (max-width: 768px) {
       #hud {
         padding: 10px 10px;
@@ -384,16 +452,16 @@
         padding: 5px 10px;
         font-size: 0.82rem;
       }
-      .hud-right {
-        gap: 4px;
-      }
       .icon-btn {
-        padding: 6px 9px;
-        font-size: 0.78rem;
+        padding: 6px 11px;
+        font-size: 0.8rem;
       }
       .progress-track {
         height: 14px;
-        max-width: 150px;
+        max-width: 165px;
+      }
+      .mobile-touch-pads.enabled {
+        display: flex;
       }
     }
 
@@ -439,18 +507,42 @@
 
         <!-- Right Action Buttons -->
         <div class="hud-right">
-          <button id="sound-toggle-btn" class="toon-pill icon-btn" aria-label="Toggle Sound" title="Toggle Sound">
-            <span id="sound-icon">🔊</span>
-          </button>
-          <button id="cam-toggle-btn" class="toon-pill icon-btn" aria-label="Switch Camera" title="Switch Camera View">
-            <span id="cam-icon">🎥</span>
-          </button>
           <button id="pause-btn" class="toon-pill icon-btn" aria-label="Pause Game">PAUSE</button>
         </div>
       </div>
 
       <!-- Floating Pickup / Combo Feedback -->
       <div id="floating-feedback"></div>
+
+      <!-- Bottom Hints & Quick Controls -->
+      <div class="hud-bottom">
+        <div class="hint-banner" id="hint-banner">
+          Swipe or Use Arrow Keys / WASD • Jump Over Barriers & Slide Under Gates!
+        </div>
+
+        <!-- Optional Touch Buttons for Mobile Players -->
+        <div class="mobile-touch-pads" id="mobile-pads">
+          <button class="touch-pad-btn" data-action="left" aria-label="Move Left">◀</button>
+          <button class="touch-pad-btn" data-action="jump" aria-label="Jump">▲ JUMP</button>
+          <button class="touch-pad-btn" data-action="slide" aria-label="Slide">▼ SLIDE</button>
+          <button class="touch-pad-btn" data-action="right" aria-label="Move Right">▶</button>
+        </div>
+
+        <div class="bottom-pills">
+          <button id="sound-toggle-btn" class="toon-pill bottom-pill-item">
+            <span id="sound-icon">🔊</span>
+            <span id="sound-text">Sound: ON</span>
+          </button>
+          <button id="cam-toggle-btn" class="toon-pill bottom-pill-item">
+            <span>🎥</span>
+            <span id="cam-text">Cam: Dynamic</span>
+          </button>
+          <button id="pads-toggle-btn" class="toon-pill bottom-pill-item">
+            <span>🎮</span>
+            <span id="pads-text">Touch Pads: Auto</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Start Menu Overlay -->
@@ -726,6 +818,7 @@
       slideDuration: 0.68,
       runCycle: 0,
       cameraMode: 'DYNAMIC', // 'DYNAMIC' | 'HIGH'
+      touchPadsMode: 'AUTO', // 'AUTO' | 'ON' | 'OFF'
       // Active power-ups (in seconds remaining)
       powerups: {
         magnet: 0,
@@ -1727,13 +1820,15 @@
       rankFill: document.getElementById('rank-progress-fill'),
       powerupBar: document.getElementById('powerup-bar'),
       floatingFeedback: document.getElementById('floating-feedback'),
+      hintBanner: document.getElementById('hint-banner'),
       startOverlay: document.getElementById('start-overlay'),
       pauseOverlay: document.getElementById('pause-overlay'),
       gameoverOverlay: document.getElementById('gameover-overlay'),
       finalScore: document.getElementById('final-score'),
       bestScore: document.getElementById('best-score'),
       finalCoins: document.getElementById('final-coins'),
-      newBestPill: document.getElementById('new-best-pill')
+      newBestPill: document.getElementById('new-best-pill'),
+      mobilePads: document.getElementById('mobile-pads')
     };
 
     function showFloatingMessage(text, color = '#fde047') {
@@ -1908,6 +2003,27 @@
       }
     }, { passive: true });
 
+    // Optional on-screen mobile tap pads
+    document.querySelectorAll('.touch-pad-btn').forEach((btn) => {
+      btn.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        const act = btn.getAttribute('data-action');
+        if (act === 'left') moveLeft();
+        if (act === 'right') moveRight();
+        if (act === 'jump') triggerJump();
+        if (act === 'slide') triggerSlide();
+      }, { passive: true });
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const act = btn.getAttribute('data-action');
+        if (act === 'left') moveLeft();
+        if (act === 'right') moveRight();
+        if (act === 'jump') triggerJump();
+        if (act === 'slide') triggerSlide();
+      });
+    });
+
     // ----------------------------------------------------------------------------
     // 10. GAME LIFECYCLE (START, PAUSE, RESUME, GAMEOVER)
     // ----------------------------------------------------------------------------
@@ -1962,7 +2078,16 @@
       generateWave(-62);
       generateWave(-86);
 
+      // Auto-enable touch pads on mobile touch devices if set to AUTO
+      applyTouchPadVisibility();
       updateHUD();
+
+      // Fade out hint banner after 5 seconds of running
+      ui.hintBanner.style.opacity = '1';
+      clearTimeout(window._hintTimeout);
+      window._hintTimeout = setTimeout(() => {
+        ui.hintBanner.style.opacity = '0';
+      }, 5000);
     }
 
     function pauseGame() {
@@ -2002,6 +2127,15 @@
       ui.gameoverOverlay.classList.remove('hidden');
     }
 
+    function applyTouchPadVisibility() {
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (state.touchPadsMode === 'ON' || (state.touchPadsMode === 'AUTO' && isTouch)) {
+        ui.mobilePads.classList.add('enabled');
+      } else {
+        ui.mobilePads.classList.remove('enabled');
+      }
+    }
+
     // Button Event Bindings
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('retry-btn').addEventListener('click', startGame);
@@ -2015,14 +2149,22 @@
     document.getElementById('sound-toggle-btn').addEventListener('click', () => {
       const isOn = sfx.toggle();
       document.getElementById('sound-icon').textContent = isOn ? '🔊' : '🔇';
+      document.getElementById('sound-text').textContent = isOn ? 'Sound: ON' : 'Sound: OFF';
     });
 
     document.getElementById('cam-toggle-btn').addEventListener('click', () => {
       state.cameraMode = state.cameraMode === 'DYNAMIC' ? 'HIGH' : 'DYNAMIC';
-      showFloatingMessage(
-        state.cameraMode === 'DYNAMIC' ? '🎥 CAM: DYNAMIC' : '🎥 CAM: WIDE',
-        '#ffffff'
-      );
+      document.getElementById('cam-text').textContent =
+        state.cameraMode === 'DYNAMIC' ? 'Cam: Dynamic' : 'Cam: Wide';
+    });
+
+    document.getElementById('pads-toggle-btn').addEventListener('click', () => {
+      const modes = ['AUTO', 'ON', 'OFF'];
+      const next = modes[(modes.indexOf(state.touchPadsMode) + 1) % modes.length];
+      state.touchPadsMode = next;
+      document.getElementById('pads-text').textContent =
+        next === 'AUTO' ? 'Touch Pads: Auto' : next === 'ON' ? 'Touch Pads: ON' : 'Touch Pads: OFF';
+      applyTouchPadVisibility();
     });
 
     // ----------------------------------------------------------------------------
@@ -2342,6 +2484,7 @@
 
     window.onload = function () {
       handleResize();
+      applyTouchPadVisibility();
       updateHUD();
       lastFrameTime = performance.now();
       animate(lastFrameTime);
